@@ -6,9 +6,9 @@ import Prover.Constants (default_depth)
 import Text.Parsec
 
 import Language.Fixpoint.Parse hiding (bindP)
-import Language.Fixpoint.Types        (Pred(PTrue))
+import Language.Fixpoint.Types        (Pred(PTrue), symbol, Sort(FObj))
 
-parseQuery :: String -> IO BQuery
+parseQuery :: String -> IO LQuery
 parseQuery fn = parseFromFile (queryP fn) fn 
 
 
@@ -35,21 +35,21 @@ queryP fn = do
                   }
 
 
-declsP :: Parser [Predicate a]
+declsP :: Parser [Predicate]
 declsP = try (do {n <- sepBy declP whiteSpace; semi; return n} )
       <|> return []
 
-declP :: Parser (Predicate a)
+declP :: Parser Predicate
 declP = reserved "declare" >> predicateP
 
 depthP :: Parser Int 
 depthP = try (do {reserved "depth"; reserved "="; n <- fromInteger <$> integer; semi; return n} )
       <|> return default_depth
 
-goalP :: Parser (Predicate a)
+goalP :: Parser Predicate
 goalP = reserved "goal" >> colon >> predicateP
 
-ctorP :: Parser BCtor
+ctorP :: Parser LCtor
 ctorP = do reserved "constructor"
            v <- varP
            (vs, p) <- try (ctorAxiomP)
@@ -63,33 +63,38 @@ ctorAxiomP
          return (aargs, abody) 
   <|> return ([], Pred PTrue)
 
-bindP :: Parser BVar
+bindP :: Parser LVar
 bindP = reserved "bind" >> varP
 
-envP :: Parser BVar
+envP :: Parser LVar
 envP = reserved "constant" >> varP
 
-predicateP :: Parser (Predicate a)
+predicateP :: Parser Predicate
 predicateP = Pred <$> predP
 
-axiomP :: Parser BAxiom
+axiomP :: Parser LAxiom
 axiomP = do 
   reserved "axiom"
-  aname <- symbolP
+  aname <- mkVar <$> symbolP
   colon
   reserved "forall"
   aargs <- argumentsP
   abody <- predicateP
   return $ Axiom aname aargs abody
+ where
+   dummySort = FObj (symbol "dummySort")
+   mkVar x   = Var x dummySort ()
 
 
-argumentsP :: Parser ([BVar])
+argumentsP :: Parser ([LVar])
 argumentsP = brackets $ sepBy varP comma
 
-varP :: Parser BVar
+varP :: Parser LVar
 varP = do 
   x <- symbolP
   colon
   s <- sortP
   return $ Var x s ()
+
+
 

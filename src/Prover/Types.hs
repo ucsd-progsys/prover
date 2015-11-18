@@ -7,15 +7,15 @@ import Prover.Constants (default_depth)
 import qualified Language.Fixpoint.Types as F 
 import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
 
-type BVar   = Var   ()
-type BCtor  = Ctor   ()
-type BAxiom = Axiom ()
-type BQuery = Query ()
+type LVar   = Var   ()
+type LCtor  = Ctor   ()
+type LAxiom = Axiom ()
+type LQuery = Query ()
 
 
-data Axiom a = Axiom { axiom_name :: Symbol
-                     , axiom_vars :: [Var a]
-                     , axiom_body :: Predicate a
+data Axiom a = Axiom { axiom_name :: Var a 
+                     , axiom_vars :: [LVar]
+                     , axiom_body :: Predicate
                      } 
 
 data Var a   = Var { var_name :: Symbol
@@ -27,8 +27,8 @@ instance Eq (Var a) where
   v1 == v2 = (var_name v1) == (var_name v2)
 
 data Ctor a  = Ctor { ctor_var :: Var a
-                    , ctor_vars :: [Var a]
-                    , ctor_prop :: Predicate a
+                    , ctor_vars :: [LVar]
+                    , ctor_prop :: Predicate
                     } 
 
 instance Eq (Ctor a) where
@@ -38,25 +38,25 @@ data Expr a  = EVar (Var a)
              | EApp (Ctor a) [Expr a]
   deriving (Eq)
 
-newtype Predicate a = Pred {p_pred :: Pred}
+newtype Predicate = Pred {p_pred :: Pred}
 
 data Proof a     = Invalid 
                  | Proof { p_evidence :: [Instance a]}
 
 data Instance a  = Inst { inst_axiom :: Axiom a 
                         , inst_args  :: [Expr a]
-                        , inst_pred  :: Predicate a
+                        , inst_pred  :: Predicate
                         }
 
 
 data Query a = Query { q_axioms :: ![Axiom a] 
                      , q_ctors  :: ![Ctor a] 
                      , q_vars   :: ![Var a] 
-                     , q_env    :: ![Var a] 
-                     , q_goal   :: !(Predicate a)
+                     , q_env    :: ![LVar] 
+                     , q_goal   :: !Predicate
                      , q_fname  :: !FilePath
                      , q_depth  :: !Int 
-                     , q_decls  :: [Predicate a]
+                     , q_decls  :: [Predicate]
                      } 
 
 -- | ArgExpr provides for each sort s
@@ -67,7 +67,7 @@ data ArgExpr a = ArgExpr { arg_sort  :: Sort
                          , arg_ctors :: [Ctor a]   
                          }
 
-instance Monoid (Predicate a) where
+instance Monoid Predicate where
     mempty                      = Pred mempty 
     mappend (Pred p1) (Pred p2) = Pred (p1 `mappend` p2)
 
@@ -92,11 +92,11 @@ instance Monoid (Query a) where
                           }
 
 
-instance F.Subable (Predicate a) where
-  subst su (Pred p) = Pred $ subst su p 
+instance F.Subable Predicate where
+  subst su (Pred p)  = Pred $ subst su p 
   substa su (Pred p) = Pred $ substa su p 
   substf su (Pred p) = Pred $ substf su p 
-  syms (Pred p)     = syms p 
+  syms (Pred p)      = syms p 
 
 mkExpr :: Expr a -> F.Expr
 mkExpr (EVar v)    = F.EVar (var_name v)

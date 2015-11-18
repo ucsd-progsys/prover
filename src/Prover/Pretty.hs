@@ -10,7 +10,7 @@ instance PPrint (Var a) where
 instance PPrint (Expr a) where
    pprint = pprint . mkExpr 
 
-instance PPrint (Predicate a) where
+instance PPrint Predicate where
    pprint = pprint . p_pred 
 
 instance Show (Axiom a) where
@@ -30,7 +30,7 @@ instance Show (Expr a) where
    show (EVar v)    = showpp v 
    show (EApp c es) = show c ++ par (sep ", "  $ map show es)  
 
-instance Show (Predicate a) where
+instance Show Predicate where
    show (Pred p) = showpp $ pprint p
 
 instance Show (Query a) where
