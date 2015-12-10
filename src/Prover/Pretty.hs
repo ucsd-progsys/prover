@@ -2,7 +2,7 @@ module Prover.Pretty where
 
 import Prover.Types
 
-import Language.Fixpoint.PrettyPrint
+import Language.Fixpoint.Types 
 
 instance PPrint (Var a) where
    pprint = pprint . var_name 
