@@ -9,8 +9,7 @@ import Prover.Misc (findM, powerset, combine2, combine)
 
 import Language.Fixpoint.Smt.Interface (Context)
 
--- import Language.Fixpoint.Misc
-import Language.Fixpoint.Sort
+import Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types as F 
 
 import Data.List  (nubBy)
