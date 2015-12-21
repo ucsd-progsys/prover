@@ -12,7 +12,7 @@ import Language.Fixpoint.Smt.Interface (Context)
 import Language.Fixpoint.SortCheck
 import qualified Language.Fixpoint.Types as F 
 
-import Data.List  (nubBy)
+import Data.List  (nubBy, nub)
 import Data.Maybe (isJust, fromJust)
 
 import System.IO
@@ -30,7 +30,7 @@ solve q =
   where 
     sorts = makeSorts q
     es    = initExpressions (q_vars q) (q_ctors q) sorts 
-    env   = [(var_name v, var_sort v) | v <- ((ctor_var <$> q_ctors q) ++ q_vars q)] ++ [(var_name v, var_sort v) | v <- q_env q]
+    env   = nub [(var_name v, var_sort v) | v <- ((ctor_var <$> q_ctors q) ++ q_vars q)] ++ [(var_name v, var_sort v) | v <- q_env q]
 
 
 iterativeSolve :: Int -> Context -> [ArgExpr a] -> F.Pred -> [Axiom a] -> IO (Proof a)
