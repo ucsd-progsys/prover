@@ -31,7 +31,7 @@ instance Eq (Var a) where
 
 -- Note: Ctors may be higher order, like compose
 -- when not fully instantiated, the predicate should not be used
-data Ctor a  = Ctor { ctor_var  :: Expr a
+data Ctor a  = Ctor { ctor_expr :: Expr a
                     , ctor_sort :: Sort 
                     , ctor_vars :: [LVar]
                     , ctor_prop :: Predicate
@@ -115,8 +115,8 @@ instance F.Subable Predicate where
 
 mkExpr :: Expr a -> F.Expr
 mkExpr (EVar v)    = F.EVar (var_name v)
-mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- var_sort (ctor_var c)
-  = F.EApp (F.dummyLoc $ var_name $ ctor_var c) (mkExpr <$> es)
+mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- ctor_sort c, EVar v <- ctor_expr
+  = F.EApp (F.dummyLoc $ var_name v) (mkExpr <$> es)
 mkExpr (EApp c es) = applyArrow (var_sort $ ctor_var c) (F.EVar $ var_name $ ctor_var c) (mkExpr <$> es)
 
 
