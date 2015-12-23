@@ -1,8 +1,10 @@
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE PatternGuards        #-}
 
 module Prover.Types where
 
 import Prover.Constants (default_depth)
+import Prover.Names
 
 import qualified Language.Fixpoint.Types as F
 import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
@@ -26,16 +28,29 @@ data Var a   = Var { var_name :: Symbol
 instance Eq (Var a) where
   v1 == v2 = (var_name v1) == (var_name v2)
 
-data Ctor a  = Ctor { ctor_var :: Var a
+
+-- Note: Ctors may be higher order, like compose
+-- when not fully instantiated, the predicate should not be used
+data Ctor a  = Ctor { ctor_var  :: Expr a
+                    , ctor_sort :: Sort 
                     , ctor_vars :: [LVar]
                     , ctor_prop :: Predicate
                     }
+              -- constructors can be expressions like (compose f g)
+
+
+data VarCtor a  = VarCtor { vctor_var  :: Var a
+                          , vctor_vars :: [LVar]
+                          , vctor_prop :: Predicate
+                          }
+
 
 instance Eq (Ctor a) where
   c1 == c2 = (ctor_var c1) == (ctor_var c2)
 
 data Expr a  = EVar (Var a)
              | EApp (Ctor a) [Expr a]
+
   deriving (Eq)
 
 newtype Predicate = Pred {p_pred :: Pred}
@@ -50,7 +65,7 @@ data Instance a  = Inst { inst_axiom :: Axiom a
 
 
 data Query a = Query { q_axioms :: ![Axiom a]
-                     , q_ctors  :: ![Ctor a]
+                     , q_ctors  :: ![VarCtor a]
                      , q_vars   :: ![Var a]
                      , q_env    :: ![LVar]
                      , q_goal   :: !Predicate
@@ -100,4 +115,16 @@ instance F.Subable Predicate where
 
 mkExpr :: Expr a -> F.Expr
 mkExpr (EVar v)    = F.EVar (var_name v)
-mkExpr (EApp c es) = F.EApp (F.dummyLoc $ var_name $ ctor_var c) (mkExpr <$> es)
+mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- var_sort (ctor_var c)
+  = F.EApp (F.dummyLoc $ var_name $ ctor_var c) (mkExpr <$> es)
+mkExpr (EApp c es) = applyArrow (var_sort $ ctor_var c) (F.EVar $ var_name $ ctor_var c) (mkExpr <$> es)
+
+
+applyArrow :: F.Sort -> F.Expr -> [F.Expr] -> F.Expr
+applyArrow (F.FFunc _ _) e [] = e
+applyArrow _          y ys = go $ reverse ys 
+  where 
+    go []     = error ("Defunctinalize.applyArrow on " ++ show (y, ys))
+    go [x]    = F.EApp (F.dummyLoc runFunName) [y, x]
+    go (x:xs) = F.EApp (F.dummyLoc runFunName) [go xs, x]
+

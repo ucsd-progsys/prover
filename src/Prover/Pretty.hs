@@ -18,13 +18,13 @@ instance Show (Axiom a) where
 
 instance Show (Instance a) where
    show i = "\nInstance :: " ++ show (inst_axiom i) ++ "With Arguments :: " ++  (sep ", " $ map show (inst_args i))
-                          --  ++ "\n\nPredicate = " ++ show (inst_pred i)  ++ "\n\n"
+                            ++ "\n\nPredicate = " ++ show (inst_pred i)  ++ "\n\n"
 
 instance Show (Var a) where
    show v = showpp (var_name v) ++ " : " ++ showpp (var_sort v)
 
 instance Show (Ctor a) where
-   show c = showpp (ctor_var c)
+   show c = show (ctor_var c) ++ "\t \\" ++ (sep ", " $ map show (ctor_vars c)) ++ " -> " ++ show (ctor_prop c)
 
 instance Show (Expr a) where
    show (EVar v)    = showpp v
@@ -36,10 +36,11 @@ instance Show Predicate where
 instance Show (Query a) where
    show q = "\nQuery\n" ++
               "\nAxioms::" ++ (showNum $ q_axioms q) ++
-              "\nVars  ::" ++ (sep ", " $ map showpp $ q_vars   q) ++
+              "\nVars  ::" ++ (sep ", " $ map show   $ q_vars   q) ++
               "\nCtors ::" ++ (sep ", " $ map show   $ q_ctors  q) ++
               "\nDecls ::" ++ (sep ", " $ map show   $ q_decls  q) ++
               "\nGoal  ::" ++ (show $ q_goal q) ++
+              "\nDecls ::" ++ (show $ q_decls q) ++
               "\nFname ::" ++ (show $ q_fname q)
 
 instance Show (Proof a) where

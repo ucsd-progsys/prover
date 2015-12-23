@@ -25,7 +25,9 @@ library
                        Prover.Pretty,
                        Prover.SMTInterface,
                        Prover.Solve,
-                       Prover.Types
+                       Prover.Types, 
+                       Prover.Names, 
+                       Prover.Defunctionalize
 
 
 
