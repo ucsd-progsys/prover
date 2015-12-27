@@ -9,10 +9,10 @@ import Prover.Names
 import qualified Language.Fixpoint.Types as F
 import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
 
-type LVar   = Var   ()
-type LCtor  = Ctor   ()
-type LAxiom = Axiom ()
-type LQuery = Query ()
+type LVar     = Var     ()
+type LVarCtor = VarCtor ()
+type LAxiom   = Axiom   ()
+type LQuery   = Query   ()
 
 
 data Axiom a = Axiom { axiom_name :: Var a
@@ -46,7 +46,7 @@ data VarCtor a  = VarCtor { vctor_var  :: Var a
 
 
 instance Eq (Ctor a) where
-  c1 == c2 = (ctor_var c1) == (ctor_var c2)
+  c1 == c2 = (ctor_expr c1) == (ctor_expr c2)
 
 data Expr a  = EVar (Var a)
              | EApp (Ctor a) [Expr a]
@@ -113,18 +113,25 @@ instance F.Subable Predicate where
   substf su (Pred p) = Pred $ substf su p
   syms (Pred p)      = syms p
 
+varCtorToCtor :: VarCtor a -> Ctor a
+varCtorToCtor (VarCtor v vs p) = Ctor (EVar v) (var_sort v) vs p
+
+
+isEVar (EVar _) = True
+isEVar _        = False
+
 mkExpr :: Expr a -> F.Expr
 mkExpr (EVar v)    = F.EVar (var_name v)
-mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- ctor_sort c, EVar v <- ctor_expr
+mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- ctor_sort c, EVar v <- ctor_expr c
   = F.EApp (F.dummyLoc $ var_name v) (mkExpr <$> es)
-mkExpr (EApp c es) = applyArrow (var_sort $ ctor_var c) (F.EVar $ var_name $ ctor_var c) (mkExpr <$> es)
+mkExpr (EApp c es) = applyArrow (mkExpr $ ctor_expr c) (mkExpr <$> es)
 
 
-applyArrow :: F.Sort -> F.Expr -> [F.Expr] -> F.Expr
-applyArrow (F.FFunc _ _) e [] = e
-applyArrow _          y ys = go $ reverse ys 
+applyArrow :: F.Expr -> [F.Expr] -> F.Expr
+applyArrow e [] = e
+applyArrow y ys = go $ reverse ys 
   where 
-    go []     = error ("Defunctinalize.applyArrow on " ++ show (y, ys))
+    go []     = error ("Types.applyArrow on " ++ show (y, ys))
     go [x]    = F.EApp (F.dummyLoc runFunName) [y, x]
     go (x:xs) = F.EApp (F.dummyLoc runFunName) [go xs, x]
 

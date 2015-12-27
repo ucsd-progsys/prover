@@ -49,11 +49,11 @@ depthP = try (do {reserved "depth"; reserved "="; n <- fromInteger <$> integer; 
 goalP :: Parser Predicate
 goalP = reserved "goal" >> colon >> predicateP
 
-ctorP :: Parser LCtor
+ctorP :: Parser LVarCtor
 ctorP = do reserved "constructor"
            v <- varP
            (vs, p) <- try (ctorAxiomP)
-           return $ Ctor v vs p
+           return $ VarCtor v vs p
 
 ctorAxiomP 
    =  do reserved "with"
