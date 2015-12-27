@@ -1,0 +1,13 @@
+;
+bind f : Arrow a a
+bind N : func(1, [L @(0)])
+bind g : Arrow a a
+bind runFun : func(2, [(Arrow  @(0)  @(1)); @(0); @(1)]) ;
+
+axiom axiom_append_nil : forall [z:Arrow a a] runFun (runFun map z) N  == N ; 
+
+constructor map : func(2, [(Arrow  (Arrow  @(0)  @(1))  (Arrow  (L  @(0))  (L  @(1))))])
+constructor C : func(1, [(Arrow  @(0)  (Arrow  (L  @(0))  (L  @(0))))])
+constructor compose : func(3, [(Arrow  (Arrow  @(1)  @(0))  (Arrow  (Arrow  @(2)  @(1))  (Arrow  @(2)  @(0))))]) ;
+
+goal  : runFun (runFun map (  runFun (runFun compose f) g  )) N == N
