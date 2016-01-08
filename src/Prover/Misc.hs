@@ -31,3 +31,5 @@ findM p (x:xs) = do {r <- p x; if r then return (Just x) else findM p xs}
 
 
 mapSnd f (x, y) = (x, f y)
+
+second3 f (x, y, z) = (x, f y, z)

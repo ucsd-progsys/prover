@@ -4,7 +4,7 @@
 module Prover.Types where
 
 import Prover.Constants (default_depth)
-import Prover.Names
+import Prover.Defunctionalize
 
 import qualified Language.Fixpoint.Types as F
 import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
@@ -125,13 +125,3 @@ mkExpr (EVar v)    = F.EVar (var_name v)
 mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- ctor_sort c, EVar v <- ctor_expr c
   = F.EApp (F.dummyLoc $ var_name v) (mkExpr <$> es)
 mkExpr (EApp c es) = applyArrow (mkExpr $ ctor_expr c) (mkExpr <$> es)
-
-
-applyArrow :: F.Expr -> [F.Expr] -> F.Expr
-applyArrow e [] = e
-applyArrow y ys = go $ reverse ys 
-  where 
-    go []     = error ("Types.applyArrow on " ++ show (y, ys))
-    go [x]    = F.EApp (F.dummyLoc runFunName) [y, x]
-    go (x:xs) = F.EApp (F.dummyLoc runFunName) [go xs, x]
-

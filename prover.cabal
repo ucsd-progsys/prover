@@ -18,7 +18,9 @@ library
   hs-source-dirs:      src
   default-language:    Haskell98
   build-depends:       liquid-fixpoint >= 0.5,
-                       base >=4.8, parsec
+                       base >=4.8, parsec, 
+                       unordered-containers, hashable
+                       
   exposed-modules :    Prover.Constants, 
                        Prover.Misc,
                        Prover.Parser,
@@ -35,6 +37,8 @@ executable prover
   default-language:    Haskell98
   build-depends:       liquid-fixpoint >= 0.5
                      , base >=4.8, parsec
+                     , unordered-containers, hashable
+
   hs-source-dirs:      src
   
   main-is: Prover.hs
