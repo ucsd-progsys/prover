@@ -28,3 +28,6 @@ powerset' (x:xs) = xss /\/ map (x:) xss
 findM :: (Monad m) => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ []     = return Nothing 
 findM p (x:xs) = do {r <- p x; if r then return (Just x) else findM p xs}
+
+
+mapSnd f (x, y) = (x, f y)
