@@ -31,6 +31,14 @@ instance Defunctionalize Expr where
   defunc (EBin o e1 e2) = EBin o (defunc e1) (defunc e2)
   defunc (EIte p e1 e2) = EIte (defunc p) (defunc e1) (defunc e2)
   defunc (ECst e s)     = ECst (defunc e) (defunc s)
+  defunc (PAnd ps)       = PAnd (defunc <$> ps)
+  defunc (POr  ps)       = POr  (defunc <$> ps)
+  defunc (PNot p)        = PNot (defunc p)
+  defunc (PImp p1 p2)    = PImp (defunc p1) (defunc p2)
+  defunc (PIff p1 p2)    = PIff (defunc p1) (defunc p2)
+  defunc (PAtom b e1 e2) = PAtom b (defunc e1) (defunc e2)
+  defunc (PAll ss p)     = PAll (mapSnd defunc <$> ss) (defunc p)
+  defunc (PExist ss p)   = PExist (mapSnd defunc <$> ss) (defunc p)
   defunc e              = e 
 
 
@@ -44,18 +52,6 @@ applyArrow y ys = go $ reverse ys
     go [x]    = EApp (dummyLoc runAppSymbol) [y, x]
     go (x:xs) = EApp (dummyLoc runAppSymbol) [go xs, x]
 
-
-instance Defunctionalize Pred where
-  defunc (PAnd ps)       = PAnd (defunc <$> ps)
-  defunc (POr  ps)       = POr  (defunc <$> ps)
-  defunc (PNot p)        = PNot (defunc p)
-  defunc (PImp p1 p2)    = PImp (defunc p1) (defunc p2)
-  defunc (PIff p1 p2)    = PIff (defunc p1) (defunc p2)
-  defunc (PBexp e)       = PBexp (exprToBool $ defunc e)
-  defunc (PAtom b e1 e2) = PAtom b (defunc e1) (defunc e2)
-  defunc (PAll ss p)     = PAll (mapSnd defunc <$> ss) (defunc p)
-  defunc (PExist ss p)   = PExist (mapSnd defunc <$> ss) (defunc p)
-  defunc p               = p
 
 
 exprToBool :: Expr -> Expr 
@@ -108,7 +104,7 @@ instance (Defunctionalize (c a), Defunctionalize a) => Defunctionalize (GInfo c 
   defunc finfo = finfo { cm       = defunc $ cm finfo
                        , ws       = defunc $ ws finfo
                        , bs       = defunc $ bs finfo
-                       , lits     = insertSEnv runAppSymbol  runAppSort $ 
+                       , lits     = insertSEnv runAppSymbol  runAppSort     $ 
                                     insertSEnv exprToBoolSym exprToBoolSort $ defunc $ lits finfo
                        , quals    = defunc $ quals finfo
                        , bindInfo = defunc $ bindInfo finfo

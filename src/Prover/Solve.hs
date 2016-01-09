@@ -39,7 +39,7 @@ solve q =
     env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q)] ++ [(var_name v, var_sort v) | v <- q_env q])
     γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
 
-iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Pred -> [Axiom a] -> IO (Proof a)
+iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Expr -> [Axiom a] -> IO (Proof a)
 iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
   where 
     go _  _      i _  | i == iter = return Invalid 
@@ -55,11 +55,11 @@ iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
 
 
 
-findValid :: Context -> [Instance a] -> F.Pred -> IO (Maybe [Instance a])
+findValid :: Context -> [Instance a] -> F.Expr -> IO (Maybe [Instance a])
 findValid cxt ps q 
   = (\b -> if b then Just ps else Nothing) <$> checkValid cxt (p_pred . inst_pred <$> ps) q
 
-minimize :: Context -> [Instance a] -> F.Pred -> IO [Instance a]
+minimize :: Context -> [Instance a] -> F.Expr -> IO [Instance a]
 minimize cxt ps q | length ps < epsilon = fromJust <$> bruteSearch cxt ps q 
 minimize cxt ps q = go 1 [] ps 
   where
@@ -73,7 +73,7 @@ minimize cxt ps q = go 1 [] ps
                      if res then go (i+1) acc          ps2 
                             else go (i+1) (acc ++ ps1) ps2 
 
-bruteSearch :: Context -> [Instance a] -> F.Pred -> IO (Maybe [Instance a])
+bruteSearch :: Context -> [Instance a] -> F.Expr -> IO (Maybe [Instance a])
 bruteSearch cxt ps q 
   = findM (\is -> checkValid cxt (p_pred . inst_pred <$> is) q) (powerset ps)
 
@@ -85,7 +85,7 @@ filterEquivalentExpressions γ cxt is esold esnew
                                      (F.POr $ catMaybes $ (makeEq γ e <$> esold))
     f e = not <$> checkValid cxt (p_pred . inst_pred <$> is) (F.POr $ catMaybes $ (makeEq γ e <$> esold))
 
-makeEq :: PrEnv -> Expr a -> Expr a -> Maybe (F.Pred)
+makeEq :: PrEnv -> Expr a -> Expr a -> Maybe (F.Expr)
 makeEq γ e1 e2 = case (checkSortedReftFull γ p) of 
                    Nothing -> Just p 
                    Just _  -> Nothing 

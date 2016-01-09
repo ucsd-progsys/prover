@@ -6,7 +6,7 @@ import Prover.Constants (default_depth)
 import Text.Parsec
 
 import Language.Fixpoint.Parse hiding (bindP)
-import Language.Fixpoint.Types        (Pred(PTrue), symbol, Sort(FObj))
+import Language.Fixpoint.Types        (Expr(PTrue), symbol, Sort(FObj))
 
 parseQuery :: String -> IO LQuery
 parseQuery fn = parseFromFile (queryP fn) fn 

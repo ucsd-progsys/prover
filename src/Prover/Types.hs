@@ -53,7 +53,7 @@ data Expr a  = EVar (Var a)
 
   deriving (Eq)
 
-newtype Predicate = Pred {p_pred :: Pred}
+newtype Predicate = Pred {p_pred :: F.Expr}
 
 data Proof a     = Invalid
                  | Proof { p_evidence :: [Instance a]}
