@@ -4,10 +4,9 @@
 module Prover.Types where
 
 import Prover.Constants (default_depth)
-import Prover.Defunctionalize
 
 import qualified Language.Fixpoint.Types as F
-import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
+import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr, Var)
 
 type LVar     = Var     ()
 type LVarCtor = VarCtor ()
@@ -121,7 +120,5 @@ isEVar (EVar _) = True
 isEVar _        = False
 
 mkExpr :: Expr a -> F.Expr
-mkExpr (EVar v)    = F.EVar (var_name v)
-mkExpr (EApp c es) | F.FFunc _ (_:_:_) <- ctor_sort c, EVar v <- ctor_expr c
-  = F.EApp (F.dummyLoc $ var_name v) (mkExpr <$> es)
-mkExpr (EApp c es) = applyArrow (mkExpr $ ctor_expr c) (mkExpr <$> es)
+mkExpr (EVar v)    = F.EVar $ F.makeVar (var_name v) (var_sort v)
+mkExpr (EApp c es) = foldl F.EApp (mkExpr $ ctor_expr c) (mkExpr <$> es)

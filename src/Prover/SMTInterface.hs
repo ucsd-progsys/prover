@@ -4,7 +4,7 @@ import Language.Fixpoint.Smt.Interface
 
 import Language.Fixpoint.Types
 
-makeContext :: FilePath -> [(Symbol, Sort)] -> IO Context 
+makeContext :: FilePath -> [Var] -> IO Context 
 makeContext = makeZ3Context
 
 checkValid :: Context -> [Expr] -> Expr -> IO Bool

@@ -6,7 +6,7 @@ import Prover.Constants (default_depth)
 import Text.Parsec
 
 import Language.Fixpoint.Parse hiding (bindP)
-import Language.Fixpoint.Types        (Expr(PTrue), symbol, Sort(FObj))
+import Language.Fixpoint.Types        (SExpr(PAnd), symbol, Sort(FObj), val)
 
 parseQuery :: String -> IO LQuery
 parseQuery fn = parseFromFile (queryP fn) fn 
@@ -61,7 +61,7 @@ ctorAxiomP
          aargs <- argumentsP
          abody <- predicateP
          return (aargs, abody) 
-  <|> return ([], Pred PTrue)
+  <|> return ([], Pred $ PAnd [])
 
 bindP :: Parser LVar
 bindP = reserved "bind" >> varP
@@ -70,12 +70,12 @@ envP :: Parser LVar
 envP = reserved "constant" >> varP
 
 predicateP :: Parser Predicate
-predicateP = Pred <$> predP
+predicateP = undefined -- Pred <$> predP
 
 axiomP :: Parser LAxiom
 axiomP = do 
   reserved "axiom"
-  aname <- mkVar <$> symbolP
+  aname <- mkVar . val  <$> symbolP
   colon
   reserved "forall"
   aargs <- argumentsP
@@ -91,7 +91,7 @@ argumentsP = brackets $ sepBy varP comma
 
 varP :: Parser LVar
 varP = do 
-  x <- symbolP
+  x <- val <$> symbolP
   colon
   s <- sortP
   return $ Var x s ()

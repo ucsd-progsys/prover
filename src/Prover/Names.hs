@@ -4,8 +4,7 @@ module Prover.Names where
 
 import Language.Fixpoint.Types
 
-runAppSymbol, exprToBoolSym, arrowConName :: Symbol
-arrowConName = "Arrow"
+runAppSymbol, exprToBoolSym :: Symbol
 runAppSymbol = "runApp"
 exprToBoolSym = "exprToBool"
 

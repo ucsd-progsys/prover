@@ -2,7 +2,7 @@ module Prover.Pretty where
 
 import Prover.Types
 
-import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
+import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr, Var)
 
 instance PPrint (Var a) where
    pprint = pprint . var_name

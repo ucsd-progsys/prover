@@ -6,7 +6,6 @@ import Prover.Types
 import Prover.SMTInterface
 import Prover.Pretty ()
 import Prover.Constants 
-import Prover.Defunctionalize
 
 import Prover.Misc (findM, powerset)
 
@@ -22,9 +21,8 @@ import System.IO
 import Control.Monad (filterM)
 
 import Language.Fixpoint.SortCheck
-import Language.Fixpoint.Types.Refinements (SortedReft)
 
-type PrEnv = F.SEnv SortedReft  
+type PrEnv = F.SEnv F.SortedReft  
 
 solve :: Query a -> IO (Proof a)
 solve q = 
@@ -36,8 +34,12 @@ solve q =
      return proof
   where 
     es    = initExpressions (q_vars q)
-    env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q)] ++ [(var_name v, var_sort v) | v <- q_env q])
-    γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
+    env   = nub ([F.makeVar (var_name v) (var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q)] ++
+                 [F.makeVar (var_name v) (var_sort v) | v <- q_env q])
+    γ     = F.fromListSEnv $ ( trueReft <$> env)
+
+trueReft :: F.Var -> (F.Var, F.SortedReft)
+trueReft x = (x, F.RR (F.vsort x) (F.Reft(x, F.PAnd [])))
 
 iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Expr -> [Axiom a] -> IO (Proof a)
 iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
@@ -111,7 +113,7 @@ predCtor γ c es
      Nothing -> p
      Just _  -> F.PTrue 
   where 
-    su = F.mkSubst $ zip (var_name <$> ctor_vars c) es
+    su = F.mkSubst $ zip (varToFixVar <$> ctor_vars c) es
     p  = F.subst su (p_pred $ ctor_prop c)
 
 makeExpressions :: PrEnv -> Context -> [Instance a] -> [Ctor a] -> [Expr a] -> IO [Expr a]
@@ -123,19 +125,13 @@ makeExpressions γ cxt is cts es
 makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
 
 arity :: Ctor a -> Int
-arity c 
-  | F.FFunc _ (_:_:ss) <- s
-  = length ss + 1
-  | otherwise
-  = length (unArrow s) - 1
-  where
-    s = ctor_sort c
+arity c = length $ fst $ F.splitSortArgs $ ctor_sort c
 
 initExpressions :: [Var a] -> [Expr a]
 initExpressions vs = EVar <$> filter (notFunc . var_sort) vs
   where 
-    notFunc (F.FFunc _ (_:_:_)) = False
-    notFunc _                   = True 
+    notFunc (F.FFunc _ _) = False
+    notFunc _             = True 
 
 
 instantiate :: PrEnv -> [Expr a] -> [Expr a] -> Axiom a -> [Instance a]
@@ -162,12 +158,14 @@ axiomInstance γ a es
      Nothing -> Just i
      Just _  -> Nothing 
   where 
-    pred = F.subst (F.mkSubst $ zip (var_name <$> (axiom_vars a)) (mkExpr <$> es)) (axiom_body a)
+    pred = F.subst (F.mkSubst $ zip (varToFixVar <$> (axiom_vars a)) (mkExpr <$> es)) (axiom_body a)
     i    = Inst { inst_axiom = a
                 , inst_args  = es
                 , inst_pred  = pred
                 }
 
+
+varToFixVar v = F.makeVar (var_name v) (var_sort v)
 
 checkExpr :: PrEnv -> Expr a -> Bool
 checkExpr γ e = not $ isJust $ checkSortedReftFull γ $ mkExpr e 
@@ -185,8 +183,9 @@ makeSorts :: Query a -> [F.Sort]
 makeSorts q = nubBy unifiable (asorts ++ csorts)
   where 
      asorts = var_sort <$> (concatMap axiom_vars $ q_axioms q)
-     csorts = concatMap argumentsortArrow ((var_sort . vctor_var) <$> q_ctors q)
+     csorts = concatMap argumentsort ((var_sort . vctor_var) <$> q_ctors q)
 
+argumentsort s = fst $ F.splitSortArgs s 
 
 
 unifiable :: F.Sort -> F.Sort -> Bool
