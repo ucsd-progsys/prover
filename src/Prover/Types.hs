@@ -18,7 +18,7 @@ data Axiom a = Axiom { axiom_name :: Var a
                      , axiom_vars :: [LVar]
                      , axiom_body :: Predicate
                      }
-
+-- NV TODO: make this into a fixpoint var + info 
 data Var a   = Var { var_name :: Symbol
                    , var_sort :: Sort
                    , var_info :: a
@@ -107,10 +107,10 @@ instance Monoid (Query a) where
 
 
 instance F.Subable Predicate where
-  subst su (Pred p)  = Pred $ subst su p
+  subst  su (Pred p) = Pred $ subst su p
   substa su (Pred p) = Pred $ substa su p
   substf su (Pred p) = Pred $ substf su p
-  syms (Pred p)      = syms p
+  syms      (Pred p) = syms p
 
 varCtorToCtor :: VarCtor a -> Ctor a
 varCtorToCtor (VarCtor v vs p) = Ctor (EVar v) (var_sort v) vs p

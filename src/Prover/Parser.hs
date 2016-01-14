@@ -6,7 +6,9 @@ import Prover.Constants (default_depth)
 import Text.Parsec
 
 import Language.Fixpoint.Parse hiding (bindP)
-import Language.Fixpoint.Types        (SExpr(PAnd), symbol, Sort(FObj), val)
+import Language.Fixpoint.Types        ( Env, ofBexpr
+                                      , SExpr(PAnd), symbol, Sort(FObj)
+                                      , val, dummyLoc)
 
 parseQuery :: String -> IO LQuery
 parseQuery fn = parseFromFile (queryP fn) fn 
@@ -14,16 +16,18 @@ parseQuery fn = parseFromFile (queryP fn) fn
 
 queryP fn = do
   n      <- depthP
-  bs     <- sepBy envP   whiteSpace
+  bs     <- sepBy envP   whiteSpace -- constants 
   semi
-  vars   <- sepBy bindP  whiteSpace
+  vars   <- sepBy bindP  whiteSpace -- variables 
   semi
-  ds     <- declsP
-  axioms <- sepBy axiomP whiteSpace
+  let env = [(dummyLoc $ var_name v, var_sort v) | v <- bs ++ vars]
+  ds     <- declsP env 
+  axioms <- sepBy (axiomP env) whiteSpace -- axioms use the two above 
   semi
-  ctors  <- sepBy ctorP  whiteSpace
+  ctors  <- sepBy (ctorP env)  whiteSpace
   semi 
-  goal   <- goalP
+  let env' = env ++ [(dummyLoc $ var_name $ vctor_var c, var_sort $ vctor_var c) | c <- ctors]
+  goal   <- goalP env'
   return $ mempty { q_axioms = axioms
                   , q_vars   = vars
                   , q_ctors  = ctors
@@ -35,31 +39,32 @@ queryP fn = do
                   }
 
 
-declsP :: Parser [Predicate]
-declsP = try (do {n <- sepBy declP whiteSpace; semi; return n} )
-      <|> return []
+declsP :: Env -> Parser [Predicate]
+declsP env 
+  = try (do {n <- sepBy (declP env) whiteSpace; semi; return n} )
+  <|> return []
 
-declP :: Parser Predicate
-declP = reserved "declare" >> predicateP
+declP :: Env -> Parser Predicate
+declP env = reserved "declare" >> predicateP env 
 
 depthP :: Parser Int 
 depthP = try (do {reserved "depth"; reserved "="; n <- fromInteger <$> integer; semi; return n} )
       <|> return default_depth
 
-goalP :: Parser Predicate
-goalP = reserved "goal" >> colon >> predicateP
+goalP :: Env -> Parser Predicate
+goalP env = reserved "goal" >> colon >> predicateP env 
 
-ctorP :: Parser LVarCtor
-ctorP = do reserved "constructor"
-           v <- varP
-           (vs, p) <- try (ctorAxiomP)
-           return $ VarCtor v vs p
+ctorP :: Env -> Parser LVarCtor
+ctorP env = do reserved "constructor"
+               v <- varP
+               (vs, p) <- try (ctorAxiomP env)
+               return $ VarCtor v vs p
 
-ctorAxiomP 
+ctorAxiomP env
    =  do reserved "with"
          reserved "forall"
          aargs <- argumentsP
-         abody <- predicateP
+         abody <- predicateP env 
          return (aargs, abody) 
   <|> return ([], Pred $ PAnd [])
 
@@ -69,17 +74,17 @@ bindP = reserved "bind" >> varP
 envP :: Parser LVar
 envP = reserved "constant" >> varP
 
-predicateP :: Parser Predicate
-predicateP = undefined -- Pred <$> predP
+predicateP      :: Env -> Parser Predicate
+predicateP env  = Pred . ofBexpr env <$> predP
 
-axiomP :: Parser LAxiom
-axiomP = do 
+axiomP :: Env -> Parser LAxiom
+axiomP env = do 
   reserved "axiom"
   aname <- mkVar . val  <$> symbolP
   colon
   reserved "forall"
   aargs <- argumentsP
-  abody <- predicateP
+  abody <- predicateP env 
   return $ Axiom aname aargs abody
  where
    dummySort = FObj (symbol "dummySort")
