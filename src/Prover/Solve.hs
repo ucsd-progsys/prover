@@ -6,8 +6,6 @@ import Prover.Types
 import Prover.SMTInterface
 import Prover.Pretty ()
 import Prover.Constants 
-import Prover.Defunctionalize
-
 import Prover.Misc (findM, powerset)
 
 import Language.Fixpoint.Smt.Interface (Context)
@@ -124,18 +122,16 @@ makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
 
 arity :: Ctor a -> Int
 arity c 
-  | F.FFunc _ (_:_:ss) <- s
-  = length ss + 1
-  | otherwise
-  = length (unArrow s) - 1
-  where
-    s = ctor_sort c
+  = case F.functionSort $ ctor_sort c of 
+      Nothing -> 0 
+      Just (_, ss, _) -> length ss 
 
 initExpressions :: [Var a] -> [Expr a]
 initExpressions vs = EVar <$> filter (notFunc . var_sort) vs
   where 
-    notFunc (F.FFunc _ (_:_:_)) = False
-    notFunc _                   = True 
+    notFunc (F.FAbs _ t)  = notFunc t
+    notFunc (F.FFunc _ _) = False
+    notFunc _             = True 
 
 
 instantiate :: PrEnv -> [Expr a] -> [Expr a] -> Axiom a -> [Instance a]
@@ -185,7 +181,8 @@ makeSorts :: Query a -> [F.Sort]
 makeSorts q = nubBy unifiable (asorts ++ csorts)
   where 
      asorts = var_sort <$> (concatMap axiom_vars $ q_axioms q)
-     csorts = concatMap argumentsortArrow ((var_sort . vctor_var) <$> q_ctors q)
+     csorts = concatMap argumentsort ((var_sort . vctor_var) <$> q_ctors q)
+     argumentsort s = case F.functionSort s of {Nothing -> []; Just (_, ss, s) -> s:ss}
 
 
 

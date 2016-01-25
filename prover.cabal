@@ -28,9 +28,7 @@ library
                        Prover.SMTInterface,
                        Prover.Solve,
                        Prover.Types, 
-                       Prover.Names, 
-                       Prover.Defunctionalize
-
+                       Prover.Names
 
 
 executable prover 
