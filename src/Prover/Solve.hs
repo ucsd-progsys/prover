@@ -194,6 +194,6 @@ unifiable (F.FVar _)   _              = False
 unifiable _            (F.FVar _)     = False 
 unifiable (F.FObj _)   (F.FObj _)     = True 
 unifiable (F.FApp c s) (F.FApp c' s') = unifiable c c' && unifiable s s'
-unifiable t1 t2 = isJust $ unify t1 t2
+unifiable t1 t2 = isJust $ unify (const $ error "NV TODO: prover.Solve") t1 t2
 
 
