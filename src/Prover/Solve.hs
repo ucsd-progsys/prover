@@ -132,12 +132,7 @@ arity c
       Just (_, ss, _) -> length ss 
 
 initExpressions :: [Var a] -> [Expr a]
-initExpressions vs = EVar <$> filter (notFunc . var_sort) vs
-  where 
-    notFunc (F.FAbs _ t)  = notFunc t
-    notFunc (F.FFunc _ _) = False
-    notFunc _             = True 
-
+initExpressions = map EVar
 
 instantiate :: PrEnv -> [Expr a] -> [Expr a] -> Axiom a -> [Instance a]
 instantiate γ oldses ses a 
