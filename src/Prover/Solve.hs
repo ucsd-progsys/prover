@@ -9,10 +9,10 @@ import Prover.Constants
 import Prover.Misc (findM, powerset)
 
 import Language.Fixpoint.Smt.Interface (Context)
--- import Language.Fixpoint.Misc 
+import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
-import Data.List  (nubBy, nub, permutations)
+import Data.List  (nubBy, nub, permutations, isPrefixOf)
 import Data.Maybe (isJust, fromJust, catMaybes)
 
 import System.IO
@@ -33,15 +33,20 @@ solve q =
      putStrLn $ ("\nProof = \n" ++ show proof)
      return proof
   where 
-    es    = initExpressions (q_vars q)
-    env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q)] ++ [(var_name v, var_sort v) | v <- q_env q])
+    es    = initExpressions (filter notGHCVar $ q_vars q)
+    env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q), notGHCVar v ] ++ [(var_name v, var_sort v) | v <- q_env q])
     γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
+
+
+notGHCVar v 
+  = not $ isPrefixOf "GHC" (show v)
 
 iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Expr -> [Axiom a] -> IO (Proof a)
 iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
   where 
     go _  _      i _  | i == iter = return Invalid 
-    go as old_es i es = do prf   <- findValid cxt is q   
+    go as old_es i es = do prf   <- findValid cxt is q  
+                           putStr ("Validity check with " ++ show is ++ " IS " ++ show prf) 
                            if isJust prf 
                                 then do putStrLn "Minimizing Solution"
                                         Proof <$> minimize cxt (fromJust prf) q
@@ -139,24 +144,25 @@ instantiate γ oldses ses a
   = catMaybes (axiomInstance γ a <$> args)
 
   where
-    args   = filter hasNew $ concatMap permutations $ makeArgs (length $ axiom_vars a) (oldses ++ ses)
+    args   = filter hasNew $ concatMap permutations $ makeArgs n (concatMap (replicate n) (oldses ++ ses))
     hasNew = any (`elem` ses)
+    n      = length $ axiom_vars a
 
 makeArgs :: Int -> [Expr a] -> [[Expr a]]
-makeArgs 0 _      = [[]]
+makeArgs _ 0 _      = [[]]
 makeArgs n (x:xs) 
  | n == length (x:xs)
  = [x:xs] 
  | otherwise
- = ((x:)<$> makeArgs (n-1) xs) ++ makeArgs n xs
-makeArgs n xs = error ("makeArgs" ++ show (n, xs))
+ = ((x:)<$> makeArgs (n-1) xs) ++ makeArgs str n xs
+makeArgs n xs = error ("makeArgs for "  ++ show (n, xs))
 
 
 axiomInstance :: PrEnv -> Axiom a -> [Expr a] -> Maybe (Instance a) 
 axiomInstance γ a es 
   = case checkSortedReftFull γ $ p_pred pred of
-     Nothing -> Just i
-     Just _  -> Nothing 
+     Nothing -> Just $ traceShow "\n\n Add instance" i
+     Just e  -> traceShow (show e ++ "\n\n Reject instance " ++ show i ) Nothing 
   where 
     pred = F.subst (F.mkSubst $ zip (var_name <$> (axiom_vars a)) (mkExpr <$> es)) (axiom_body a)
     i    = Inst { inst_axiom = a

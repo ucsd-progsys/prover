@@ -24,10 +24,10 @@ instance Show (Var a) where
    show v = showpp (var_name v) ++ " : " ++ showpp (var_sort v)
 
 instance Show (Ctor a) where
-   show c = show (ctor_expr c) -- ++ "\t \\" ++ (sep ", " $ map show (ctor_vars c)) ++ " -> " ++ show (ctor_prop c)
+   show c = show (ctor_expr c) ++ "\t \\" ++ (sep ", " $ map show (ctor_vars c)) ++ " -> " ++ show (ctor_prop c)
 
 instance Show (VarCtor a) where
-   show c = show (vctor_var c) -- ++ "\t \\" ++ (sep ", " $ map show (ctor_vars c)) ++ " -> " ++ show (ctor_prop c)
+   show c = show (vctor_var c) ++ "\t \\" ++ (sep ", " $ map show (vctor_vars c)) ++ " -> " ++ show (vctor_prop c)
 
 instance Show (Expr a) where
    show (EVar v)    = showpp v
