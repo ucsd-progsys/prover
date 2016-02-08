@@ -9,7 +9,7 @@ import Prover.Constants
 import Prover.Misc (findM, powerset)
 
 import Language.Fixpoint.Smt.Interface (Context)
-import Language.Fixpoint.Misc 
+-- import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
 import Data.List  (nubBy, nub, permutations, isPrefixOf)
@@ -46,7 +46,7 @@ iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
   where 
     go _  _      i _  | i == iter = return Invalid 
     go as old_es i es = do prf   <- findValid cxt is q  
-                           putStr ("Validity check with " ++ show is ++ " IS " ++ show prf) 
+                           -- putStr ("Validity check with " ++ show is ++ " IS " ++ show prf) 
                            if isJust prf 
                                 then do putStrLn "Minimizing Solution"
                                         Proof <$> minimize cxt (fromJust prf) q
@@ -144,25 +144,32 @@ instantiate γ oldses ses a
   = catMaybes (axiomInstance γ a <$> args)
 
   where
-    args   = filter hasNew $ concatMap permutations $ makeArgs n (concatMap (replicate n) (oldses ++ ses))
+    args   = filter hasNew $ concatMap permutations $ makeArgs' n (concatMap (duplicateArgs n) (oldses ++ ses))
     hasNew = any (`elem` ses)
     n      = length $ axiom_vars a
 
+
+makeArgs' n es 
+  | length es < n = []
+  | otherwise     = makeArgs n es  
+-- NV TODO: allow multiple occurences of the same argument
+duplicateArgs _ e = [e]
+
 makeArgs :: Int -> [Expr a] -> [[Expr a]]
-makeArgs _ 0 _      = [[]]
+makeArgs 0 _      = [[]]
 makeArgs n (x:xs) 
  | n == length (x:xs)
  = [x:xs] 
  | otherwise
- = ((x:)<$> makeArgs (n-1) xs) ++ makeArgs str n xs
+ = ((x:)<$> makeArgs (n-1) xs) ++ makeArgs n xs
 makeArgs n xs = error ("makeArgs for "  ++ show (n, xs))
 
 
 axiomInstance :: PrEnv -> Axiom a -> [Expr a] -> Maybe (Instance a) 
 axiomInstance γ a es 
   = case checkSortedReftFull γ $ p_pred pred of
-     Nothing -> Just $ traceShow "\n\n Add instance" i
-     Just e  -> traceShow (show e ++ "\n\n Reject instance " ++ show i ) Nothing 
+     Nothing -> Just {-  traceShow "\n\n Add instance" -} i
+     Just _e  -> {- traceShow (show e ++ "\n\n Reject instance " ++ show i ) -} Nothing 
   where 
     pred = F.subst (F.mkSubst $ zip (var_name <$> (axiom_vars a)) (mkExpr <$> es)) (axiom_body a)
     i    = Inst { inst_axiom = a
