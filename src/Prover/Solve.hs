@@ -12,7 +12,7 @@ import Language.Fixpoint.Smt.Interface (Context)
 -- import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
-import Data.List  (nubBy, nub, permutations, isPrefixOf)
+import Data.List  (nubBy, nub, permutations, isPrefixOf, partition)
 import Data.Maybe (isJust, fromJust, catMaybes)
 
 import System.IO
@@ -29,13 +29,15 @@ solve q =
   do putStrLn $ "Solving Query\n" ++ show q
      cxt     <- makeContext (smtFile $ q_fname q) env
      mapM_ (assert cxt) (p_pred <$> q_decls q)
-     proof   <- iterativeSolve γ (q_depth q) cxt (varCtorToCtor <$> q_ctors q) es (p_pred $ q_goal q) (q_axioms q)
+     mapM_ (assert cxt) (p_pred . axiom_body <$> as0)
+     proof   <- iterativeSolve γ (q_depth q) cxt (varCtorToCtor <$> q_ctors q) es (p_pred $ q_goal q) as
      putStrLn $ ("\nProof = \n" ++ show proof)
      return proof
   where 
     es    = initExpressions (filter notGHCVar $ q_vars q)
     env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q), notGHCVar v ] ++ [(var_name v, var_sort v) | v <- q_env q])
     γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
+    (as0, as) = partition (null . axiom_vars) (q_axioms q)
 
 
 notGHCVar v 
