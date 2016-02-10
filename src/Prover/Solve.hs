@@ -29,22 +29,20 @@ solve q =
   do putStrLn $ "Solving Query\n" ++ show q
      cxt     <- makeContext (smtFile $ q_fname q) env
      mapM_ (assert cxt) (p_pred <$> q_decls q)
-     mapM_ (assert cxt) (p_pred . axiom_body <$> as0)
-     proof   <- iterativeSolve γ (q_depth q) cxt (varCtorToCtor <$> q_ctors q) es (p_pred $ q_goal q) as
+     proof   <- iterativeSolve γ (q_depth q) cxt (varCtorToCtor <$> q_ctors q) es (p_pred $ q_goal q) (q_axioms q)
      putStrLn $ ("\nProof = \n" ++ show proof)
      return proof
   where 
     es    = initExpressions (filter notGHCVar $ q_vars q)
     env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q), notGHCVar v ] ++ [(var_name v, var_sort v) | v <- q_env q])
     γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
-    (as0, as) = partition (null . axiom_vars) (q_axioms q)
 
 
 notGHCVar v 
   = not $ isPrefixOf "GHC" (show v)
 
 iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Expr -> [Axiom a] -> IO (Proof a)
-iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
+iterativeSolve γ iter cxt cts es q axioms = go is0 [] 0 es
   where 
     go _  _      i _  | i == iter = return Invalid 
     go as old_es i es = do prf   <- findValid cxt is q  
@@ -56,7 +54,10 @@ iterativeSolve γ iter cxt cts es q axioms = go [] [] 0 es
                                         mapM_ (assertExpressions γ cxt) es'
                                         go is (es ++ old_es) (i+1) es' 
                         where 
-                         is = concatMap (instantiate γ old_es es) axioms ++ as
+                         is = concatMap (instantiate γ old_es es) asn ++ as
+    (as0, asn) = partition (null . axiom_vars) axioms
+    is0        = (\a -> Inst a [] (axiom_body a)) <$> as0 
+
 
 
 
