@@ -71,6 +71,7 @@ data Query a = Query { q_axioms :: ![Axiom a]
                      , q_fname  :: !FilePath
                      , q_depth  :: !Int
                      , q_decls  :: [Predicate]
+                     , q_isHO   :: Bool 
                      }
 
 -- | ArgExpr provides for each sort s
@@ -94,6 +95,7 @@ instance Monoid (Query a) where
                           , q_fname  = mempty
                           , q_depth  = default_depth
                           , q_decls  = mempty
+                          , q_isHO   = False 
                           }
     mappend q1 q2 = Query { q_axioms = q_axioms q1 `mappend` q_axioms q2
                           , q_ctors  = q_ctors  q1 `mappend` q_ctors  q2
@@ -103,6 +105,7 @@ instance Monoid (Query a) where
                           , q_fname  = q_fname  q1 `mappend` q_fname  q2
                           , q_decls  = q_decls  q1 `mappend` q_decls  q2
                           , q_depth  = q_depth  q1 `max`     q_depth  q2
+                          , q_isHO   = q_isHO   q1 ||        q_isHO   q2
                           }
 
 
