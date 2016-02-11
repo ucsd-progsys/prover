@@ -33,7 +33,7 @@ solve q =
      putStrLn $ ("\nProof = \n" ++ show proof)
      return proof
   where 
-    es    = initExpressions (filter notGHCVar $ q_vars q)
+    es    = initExpressions (filter notGHCVar $ ((vctor_var <$> q_ctors q) ++ q_vars q))
     env   = nub ([(var_name v, var_sort v) | v <- ((vctor_var <$> q_ctors q) ++ q_vars q), notGHCVar v ] ++ [(var_name v, var_sort v) | v <- q_env q])
     γ     = F.fromListSEnv $ [(x, F.trueSortedReft s) | (x,s) <- env]
 
