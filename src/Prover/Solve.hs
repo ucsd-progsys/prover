@@ -12,7 +12,7 @@ import Language.Fixpoint.Smt.Interface (Context)
 -- import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
-import Data.List  (nubBy, nub, permutations, isPrefixOf, partition)
+import Data.List  (nubBy, nub, isPrefixOf, partition)
 import Data.Maybe (isJust, fromJust, catMaybes)
 
 import System.IO
@@ -43,7 +43,7 @@ notGHCVar v
   = not $ isPrefixOf "GHC" (show v)
 
 iterativeSolve :: PrEnv -> Int -> Context -> [Ctor a] -> [Expr a] -> F.Expr -> [Axiom a] -> IO (Proof a)
-iterativeSolve γ iter cxt cts es q axioms = go is0 [] 0 es
+iterativeSolve γ iter cxt cts es q axioms = go is0 [] 0 tes
   where 
     go _  _      i _  | i == iter = return Invalid 
     go as old_es i es = do prf   <- findValid cxt is q  
@@ -53,13 +53,42 @@ iterativeSolve γ iter cxt cts es q axioms = go is0 [] 0 es
                                         Proof <$> minimize cxt (fromJust prf) q
                                 else do es' <-  makeExpressions γ cxt is cts es 
                                         mapM_ (assertExpressions γ cxt) es'
-                                        go is (es ++ old_es) (i+1) es' 
+                                        go is (mergeExpressions es old_es) (i+1) es' 
                         where 
                          is = concatMap (instantiate γ old_es es) asn ++ as
     (as0, asn) = partition (null . axiom_vars) axioms
     is0        = (\a -> Inst a [] (axiom_body a)) <$> as0 
+    tes        = groupExpressions γ es 
 
 
+type Arguments a = [(F.Sort, [Expr a])] 
+
+groupExpressions :: PrEnv -> [Expr a] -> Arguments a 
+groupExpressions γ = go [] 
+  where
+    go acc []     = acc
+    go acc (e:es) = go (placeExpr γ acc e) es 
+
+placeExpr :: PrEnv -> Arguments a -> Expr a -> Arguments a 
+placeExpr γ acc e = go [] acc 
+  where
+    t = sortExpr F.dummySpan γ' $ mkExpr e
+    go old_as []           = (t, [e]):(acc ++ old_as)
+    go old_as ((s, es):as) | unifiable s t = (s,e:es):(as ++ old_as)
+                           | otherwise     = go ((s,es):old_as) as 
+    γ' = F.fromListSEnv $ [(x, F.sr_sort s) | (x,s) <- F.toListSEnv γ]
+
+mergeExpressions :: Arguments a -> Arguments a -> Arguments a 
+mergeExpressions as1 as2 = merge as1 as2 
+  where
+    merge as1 []     = as1  
+    merge as1 (a:as) = merge (placeArg as1 a) as 
+
+placeArg as a = go [] a as 
+  where
+    go acc a [] = a:acc
+    go acc (s, es) ((s', es'):as) | unifiable s s' = (s, es++es'):(as++acc) 
+                                  | otherwise      = go ((s', es'):acc) (s, es) as 
 
 
 findValid :: Context -> [Instance a] -> F.Expr -> IO (Maybe [Instance a])
@@ -100,8 +129,8 @@ makeEq γ e1 e2 = case (checkSortedReftFull γ p) of
                 p = F.PAtom F.Eq (mkExpr e1) (mkExpr e2) 
 
 
-assertExpressions :: PrEnv -> Context -> Expr a -> IO ()
-assertExpressions γ cxt e = go e 
+assertExpressions :: PrEnv -> Context -> (F.Sort, [Expr a]) -> IO ()
+assertExpressions γ cxt a = mapM_ go (snd a) 
   where
     go (EApp c es) 
       | length es == length (ctor_vars c)
@@ -121,12 +150,13 @@ predCtor γ c es
     su = F.mkSubst $ zip (var_name <$> ctor_vars c) es
     p  = F.subst su (p_pred $ ctor_prop c)
 
-makeExpressions :: PrEnv -> Context -> [Instance a] -> [Ctor a] -> [Expr a] -> IO [Expr a]
-makeExpressions γ cxt is cts es 
-  = filterEquivalentExpressions γ cxt is es newes       
+makeExpressions :: PrEnv -> Context -> [Instance a] -> [Ctor a] -> Arguments a -> IO (Arguments a)
+makeExpressions -- γ cxt is cts es 
+  = undefined -- filterEquivalentExpressions γ cxt is es newes       
+{- 
   where
     newes = filter (checkExpr γ) [EApp c ess | c <- cts, ess <- concatMap permutations $ makeArgumnetsExpr (arity c) es]
-
+-} 
 makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
 
 arity :: Ctor a -> Int
@@ -138,15 +168,15 @@ arity c
 initExpressions :: [Var a] -> [Expr a]
 initExpressions = map EVar
 
-instantiate :: PrEnv -> [Expr a] -> [Expr a] -> Axiom a -> [Instance a]
-instantiate γ oldses ses a 
-  = catMaybes (axiomInstance γ a <$> args)
-
+instantiate :: PrEnv -> Arguments a -> Arguments a -> Axiom a -> [Instance a]
+instantiate --  γ oldses ses a 
+  =  undefined -- catMaybes (axiomInstance γ a <$> args)
+{- 
   where
     args   = filter hasNew $ concatMap permutations $ makeArgs' n (concatMap (duplicateArgs n) (oldses ++ ses))
     hasNew = any (`elem` ses)
     n      = length $ axiom_vars a
-
+-} 
 
 makeArgs' n es 
   | length es < n = []
