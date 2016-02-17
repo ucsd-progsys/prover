@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Prover.Solve where
 
@@ -9,7 +10,7 @@ import Prover.Constants
 import Prover.Misc (findM, powerset)
 
 import Language.Fixpoint.Smt.Interface (Context)
--- import Language.Fixpoint.Misc 
+import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
 import Data.List  (nubBy, nub, isPrefixOf, partition)
@@ -17,7 +18,7 @@ import Data.Maybe (isJust, fromJust, catMaybes)
 
 import System.IO
 
-import Control.Monad (filterM)
+-- import Control.Monad (filterM)
 
 import Language.Fixpoint.SortCheck
 import Language.Fixpoint.Types.Refinements (SortedReft)
@@ -113,13 +114,27 @@ bruteSearch :: Context -> [Instance a] -> F.Expr -> IO (Maybe [Instance a])
 bruteSearch cxt ps q 
   = findM (\is -> checkValid cxt (p_pred . inst_pred <$> is) q) (powerset ps)
 
-filterEquivalentExpressions :: PrEnv -> Context -> [Instance a] -> [Expr a] -> [Expr a] -> IO [Expr a]
+filterEquivalentExpressions :: PrEnv -> Context -> [Instance a] -> Arguments a -> Arguments a -> IO (Arguments a)
 filterEquivalentExpressions γ cxt is esold esnew 
-  = filterM f esnew
+  = mapM filterArguments esnew
   where 
-    f e@(EApp c es) = not <$> checkValid cxt ((predCtor γ c (mkExpr <$> es)):(p_pred . inst_pred <$> is))
-                                     (F.POr $ catMaybes $ (makeEq γ e <$> esold))
-    f e = not <$> checkValid cxt (p_pred . inst_pred <$> is) (F.POr $ catMaybes $ (makeEq γ e <$> esold))
+    filterArguments (s, es) = (s,) <$> foo [] (grapOldArgs s esold) es  
+    f eold e@(EApp c es) = not <$> checkValid cxt ((predCtor γ c (mkExpr <$> es)):(p_pred . inst_pred <$> is))
+                                     (F.POr $ catMaybes $ (makeEq γ e <$> eold))
+    f eold e = not <$> checkValid cxt (p_pred . inst_pred <$> is) (F.POr $ catMaybes $ (makeEq γ e <$> eold))
+
+
+    foo acc _   []     = return acc 
+    foo acc old (e:es) = do r <- f (acc ++ old) e
+                            if r then foo (e:acc) old es 
+                                 else foo acc     old es  
+
+
+
+    grapOldArgs _ []  = [] 
+    grapOldArgs s ((t, es):as) 
+      | unifiable s t = es ++ grapOldArgs s as 
+      | otherwise     = grapOldArgs s as 
 
 makeEq :: PrEnv -> Expr a -> Expr a -> Maybe (F.Expr)
 makeEq γ e1 e2 = case (checkSortedReftFull γ p) of 
@@ -151,12 +166,50 @@ predCtor γ c es
     p  = F.subst su (p_pred $ ctor_prop c)
 
 makeExpressions :: PrEnv -> Context -> [Instance a] -> [Ctor a] -> Arguments a -> IO (Arguments a)
-makeExpressions -- γ cxt is cts es 
-  = undefined -- filterEquivalentExpressions γ cxt is es newes       
-{- 
+makeExpressions γ cxt is cts es 
+  = traceShow ("\nNew expressions from \n" ++ show (cts) ++ "\nAND\n" ++ show es) <$> 
+     filterEquivalentExpressions γ cxt is es newes       
   where
-    newes = filter (checkExpr γ) [EApp c ess | c <- cts, ess <- concatMap permutations $ makeArgumnetsExpr (arity c) es]
--} 
+    newes = groupExpr [] [EApp c ess | c <- cts, ess <- makeCTorArgs c es]
+
+    groupExpr acc []     = acc 
+    groupExpr acc (e:es) = groupExpr (putExpr e (checkSortExpr γ' $ mkExpr e) acc) es  
+
+    γ' = F.fromListSEnv $ [(x, F.sr_sort s) | (x,s) <- F.toListSEnv γ]
+
+
+putExpr _ Nothing  as  
+  = as 
+putExpr e (Just t) []  
+  = [(t, [e])]
+putExpr e (Just t) ((s, es):as)
+  | unifiable t s = (s, e:es):as
+  | otherwise     = (s, es):putExpr e (Just t) as   
+
+
+makeArguments :: [F.Sort] -> Arguments a -> [[Expr a]]
+makeArguments ss es = applyArguments ees 
+  where 
+    ees = (`makeCandicates` es) <$> ss 
+
+    makeCandicates _ [] = [] 
+    makeCandicates s ((t,xs):xss) 
+       | unifiable s t  = xs ++ makeCandicates s xss  
+       | otherwise      = makeCandicates s xss 
+
+
+makeCTorArgs :: Ctor a -> Arguments a -> [[Expr a]]
+makeCTorArgs c = makeArguments ((var_sort <$> ctor_vars c) ++ (argumentssort $ ctor_sort c))
+  where
+    argumentssort (F.FAbs _ s)   = argumentssort s 
+    argumentssort (F.FFunc s' s) = s':argumentssort s 
+    argumentssort _              = [] 
+
+applyArguments :: [[a]] -> [[a]]
+applyArguments []           = []
+applyArguments ([]:_)       = [] 
+applyArguments ((x:xs):ess) = [x] : ((map (x:) (filter (not . null ) $ applyArguments ess)) ++ applyArguments (xs:ess))
+
 makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
 
 arity :: Ctor a -> Int
@@ -169,14 +222,12 @@ initExpressions :: [Var a] -> [Expr a]
 initExpressions = map EVar
 
 instantiate :: PrEnv -> Arguments a -> Arguments a -> Axiom a -> [Instance a]
-instantiate --  γ oldses ses a 
-  =  undefined -- catMaybes (axiomInstance γ a <$> args)
-{- 
+instantiate γ oldses ses a 
+  = catMaybes (axiomInstance γ a <$> args) 
   where
-    args   = filter hasNew $ concatMap permutations $ makeArgs' n (concatMap (duplicateArgs n) (oldses ++ ses))
-    hasNew = any (`elem` ses)
-    n      = length $ axiom_vars a
--} 
+    args   = filter hasNew $ makeArguments ss (mergeExpressions oldses ses)
+    hasNew = any (`elem` (concatMap snd ses))
+    ss     = var_sort <$> axiom_vars a 
 
 makeArgs' n es 
   | length es < n = []
