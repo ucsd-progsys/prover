@@ -10,7 +10,7 @@ import Prover.Constants
 import Prover.Misc (findM, powerset)
 
 import Language.Fixpoint.Smt.Interface (Context)
-import Language.Fixpoint.Misc 
+-- import Language.Fixpoint.Misc 
 import qualified Language.Fixpoint.Types as F 
 
 import Data.List  (nubBy, nub, isPrefixOf, partition)
@@ -49,6 +49,7 @@ iterativeSolve γ iter cxt cts es q axioms = go is0 [] 0 tes
     go _  _      i _  | i == iter = return Invalid 
     go as old_es i es = do prf   <- findValid cxt is q  
                            -- putStr ("Validity check with " ++ show is ++ " IS " ++ show prf) 
+                           -- putStrLn ("\nITERATION\n" ++ show i)
                            if isJust prf 
                                 then do putStrLn "Minimizing Solution"
                                         Proof <$> minimize cxt (fromJust prf) q
@@ -167,7 +168,7 @@ predCtor γ c es
 
 makeExpressions :: PrEnv -> Context -> [Instance a] -> [Ctor a] -> Arguments a -> IO (Arguments a)
 makeExpressions γ cxt is cts es 
-  = traceShow ("\nNew expressions from \n" ++ show (cts) ++ "\nAND\n" ++ show es) <$> 
+  = -- traceShow ("\nNew expressions from \n" ++ show cts ++ "\nAND\n" ++ show es) <$> 
      filterEquivalentExpressions γ cxt is es newes       
   where
     newes = groupExpr [] [EApp c ess | c <- cts, ess <- makeCTorArgs c es]
@@ -190,7 +191,8 @@ putExpr e (Just t) ((s, es):as)
 makeArguments :: [F.Sort] -> Arguments a -> [[Expr a]]
 makeArguments ss es = applyArguments ees 
   where 
-    ees = (`makeCandicates` es) <$> ss 
+    ees = -- traceShow ("\nCandicate for \n" ++ show ss  ++ "\nWith arguments \n" ++ show es) 
+          ((`makeCandicates` es) <$> ss)
 
     makeCandicates _ [] = [] 
     makeCandicates s ((t,xs):xss) 
@@ -223,9 +225,14 @@ initExpressions = map EVar
 
 instantiate :: PrEnv -> Arguments a -> Arguments a -> Axiom a -> [Instance a]
 instantiate γ oldses ses a 
-  = catMaybes (axiomInstance γ a <$> args) 
+  = {- traceShow ("\nInstances for\n" ++ show a ++ 
+               "ALL expr = " ++ show (oldses, mergeExpressions oldses ses) ++ 
+               "\nTYPES = \n" ++ show ss ++
+               "\nmake arguments = \n" ++ show (makeArguments ss (mergeExpressions ses oldses))
+              ) $ -} 
+     catMaybes (axiomInstance γ a <$> args) 
   where
-    args   = filter hasNew $ makeArguments ss (mergeExpressions oldses ses)
+    args   = filter (\es -> length es == length ss && hasNew es) $ makeArguments ss (mergeExpressions ses oldses)
     hasNew = any (`elem` (concatMap snd ses))
     ss     = var_sort <$> axiom_vars a 
 
@@ -248,8 +255,8 @@ makeArgs n xs = error ("makeArgs for "  ++ show (n, xs))
 axiomInstance :: PrEnv -> Axiom a -> [Expr a] -> Maybe (Instance a) 
 axiomInstance γ a es 
   = case checkSortedReftFull γ $ p_pred pred of
-     Nothing -> Just {-  traceShow "\n\n Add instance" -} i
-     Just _e  -> {- traceShow (show e ++ "\n\n Reject instance " ++ show i ) -} Nothing 
+     Nothing -> Just {-  traceShow "\n\n Add instance" -}  i
+     Just _e  -> {- traceShow (show _e ++ "\n\n Reject instance " ++ show i ) -}   Nothing 
   where 
     pred = F.subst (F.mkSubst $ zip (var_name <$> (axiom_vars a)) (mkExpr <$> es)) (axiom_body a)
     i    = Inst { inst_axiom = a
@@ -280,13 +287,18 @@ makeSorts q = nubBy unifiable (asorts ++ csorts)
 
 
 unifiable :: F.Sort -> F.Sort -> Bool
-unifiable (F.FVar _)   (F.FVar _)     = True 
-unifiable (F.FVar _)   (F.FObj _)     = True 
-unifiable (F.FObj _)   (F.FVar _)     = True 
-unifiable (F.FVar _)   _              = False 
-unifiable _            (F.FVar _)     = False 
-unifiable (F.FObj _)   (F.FObj _)     = True 
-unifiable (F.FApp c s) (F.FApp c' s') = unifiable c c' && unifiable s s'
+unifiable (F.FVar _)   (F.FVar _)       = True 
+unifiable (F.FVar _)   (F.FObj _)       = True 
+unifiable (F.FObj _)   (F.FVar _)       = True 
+unifiable (F.FVar _)   _                = True  
+unifiable _            (F.FVar _)       = True 
+unifiable (F.FObj _)   _                = True 
+unifiable _            (F.FObj _)       = True  
+unifiable (F.FApp t s) (F.FApp t' s') = unifiable t t' && unifiable s s'
+unifiable (F.FFunc t s) (F.FFunc t' s') = unifiable t t' && unifiable s s'
+unifiable (F.FAbs _ t) t'               = unifiable t t'
+unifiable t            (F.FAbs _ t')    = unifiable t t'
+
 unifiable t1 t2 = isJust $ unify (const $ error "NV TODO: prover.Solve") t1 t2
 
 
