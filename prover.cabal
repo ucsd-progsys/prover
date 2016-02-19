@@ -36,6 +36,15 @@ executable prover
   build-depends:       liquid-fixpoint >= 0.5
                      , base >=4.8, parsec
                      , unordered-containers, hashable
+  exposed-modules :    Prover.Constants, 
+                       Prover.Misc,
+                       Prover.Parser,
+                       Prover.Pretty,
+                       Prover.SMTInterface,
+                       Prover.Solve,
+                       Prover.Types, 
+                       Prover.Names
+
 
   hs-source-dirs:      src
   
