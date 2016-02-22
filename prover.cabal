@@ -20,8 +20,7 @@ library
   build-depends:       liquid-fixpoint >= 0.5,
                        base >=4.8, parsec,
                        unordered-containers, hashable
-
-  exposed-modules :    Prover.Constants,
+  exposed-modules:     Prover.Constants,
                        Prover.Misc,
                        Prover.Parser,
                        Prover.Pretty,
@@ -36,7 +35,7 @@ executable prover
   build-depends:       liquid-fixpoint >= 0.5
                      , base >=4.8, parsec
                      , unordered-containers, hashable
-  
+
   hs-source-dirs:      src
 
   main-is: Prover.hs
