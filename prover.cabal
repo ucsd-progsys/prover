@@ -7,46 +7,37 @@ author:              Niki Vazou
 maintainer:          nvazou@cs.ucsd.edu
 copyright:           2015 Niki Vazou, UC San Diego
 build-type:          Simple
--- extra-source-files:  
+-- extra-source-files:
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
-  -- other-modules:       
-  -- other-extensions:    
+  -- exposed-modules:
+  -- other-modules:
+  -- other-extensions:
   build-depends:       base >=4.8 && <4.9
   hs-source-dirs:      src
   default-language:    Haskell98
   build-depends:       liquid-fixpoint >= 0.5,
-                       base >=4.8, parsec, 
+                       base >=4.8, parsec,
                        unordered-containers, hashable
-                       
-  exposed-modules :    Prover.Constants, 
+
+  exposed-modules :    Prover.Constants,
                        Prover.Misc,
                        Prover.Parser,
                        Prover.Pretty,
                        Prover.SMTInterface,
                        Prover.Solve,
-                       Prover.Types, 
+                       Prover.Types,
                        Prover.Names
 
 
-executable prover 
+executable prover
   default-language:    Haskell98
   build-depends:       liquid-fixpoint >= 0.5
                      , base >=4.8, parsec
                      , unordered-containers, hashable
-  exposed-modules :    Prover.Constants, 
-                       Prover.Misc,
-                       Prover.Parser,
-                       Prover.Pretty,
-                       Prover.SMTInterface,
-                       Prover.Solve,
-                       Prover.Types, 
-                       Prover.Names
-
-
-  hs-source-dirs:      src
   
+  hs-source-dirs:      src
+
   main-is: Prover.hs
   ghc-options: -Werror -W
