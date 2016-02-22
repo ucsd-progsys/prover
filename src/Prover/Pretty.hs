@@ -5,16 +5,13 @@ import Prover.Types
 import Language.Fixpoint.Types hiding (Predicate, EApp, EVar, Expr)
 
 instance PPrint (Var a) where
-   pprint = pprint . var_name
-   pprintTidy _ = pprint 
+   pprintTidy k = pprintTidy k . var_name
 
 instance PPrint (Expr a) where
-   pprint = pprint . mkExpr
-   pprintTidy _ = pprint 
+   pprintTidy k = pprintTidy k . mkExpr
 
 instance PPrint Predicate where
-   pprint = pprint . p_pred
-   pprintTidy _ = pprint 
+   pprintTidy k = pprintTidy k . p_pred
 
 instance Show (Axiom a) where
    show a = showpp (axiom_name a) ++ ": " ++ "forall"++ par(sep ", " $ map show (axiom_vars a)) ++ "."  ++ show (axiom_body a) ++ "\n"
