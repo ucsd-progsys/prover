@@ -7,13 +7,9 @@ author:              Niki Vazou
 maintainer:          nvazou@cs.ucsd.edu
 copyright:           2015 Niki Vazou, UC San Diego
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.8 && <4.9
   hs-source-dirs:      src
   default-language:    Haskell98
@@ -29,14 +25,13 @@ library
                        Prover.Types,
                        Prover.Names
 
-
 executable prover
   default-language:    Haskell98
-  build-depends:       liquid-fixpoint >= 0.5
+  build-depends:       prover
+                     , liquid-fixpoint >= 0.5
                      , base >=4.8, parsec
                      , unordered-containers, hashable
 
-  hs-source-dirs:      src
-
-  main-is: Prover.hs
+  main-is: src/Prover.hs
   ghc-options: -Werror -W
+
