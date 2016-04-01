@@ -1,7 +1,7 @@
 name:                prover
 version:             0.1.0.0
 synopsis:            Automatic Prover of Logical Predicates
-license:             GPL-2
+license:             BSD3
 license-file:        LICENSE
 author:              Niki Vazou
 maintainer:          nvazou@cs.ucsd.edu
