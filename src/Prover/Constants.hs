@@ -1,25 +1,33 @@
-module Prover.Constants where 
+module Prover.Constants where
+
+import Control.Monad (when)
 
 -------------------------------------------------------------------------------
 ----------------------------   Debugging  -------------------------------------
 -------------------------------------------------------------------------------
 
-debug = True 
-whenLoud act = if debug then act else return ()
+debug :: Bool
+debug = True
+
+whenLoud :: (Monad m) => m () -> m ()
+whenLoud = when debug
 
 -------------------------------------------------------------------------------
 ------------------------   Constant Numbers   ---------------------------------
 -------------------------------------------------------------------------------
 
-delta, epsilon, default_depth :: Int 
-delta   = 5 
-epsilon = 10 
-default_depth = 2 
+delta, epsilon, default_depth :: Int
+delta   = 5
+epsilon = 10
+default_depth = 2
 
 
 -------------------------------------------------------------------------------
 ------------------------   Files  ---------------------------------------------
 -------------------------------------------------------------------------------
 
-smtFileExtention = ".smt"
-smtFile fn = fn ++ smtFileExtention 
+
+smtFile :: FilePath -> FilePath
+smtFile fn = fn ++ smtFileExtension
+  where
+    smtFileExtension = ".smt"

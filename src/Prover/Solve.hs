@@ -153,6 +153,7 @@ assertExpressions γ cxt a = mapM_ go (snd a)
     go _
       = return ()
 
+predCtor :: PrEnv -> Ctor a -> [F.Expr] -> F.Expr
 predCtor γ c es
   | length es /= length (ctor_vars c) && length (ctor_vars c) /= 0
   = F.PTrue
@@ -176,7 +177,7 @@ makeExpressions γ cxt is cts es
 
     γ' = F.fromListSEnv $ [(x, F.sr_sort s) | (x,s) <- F.toListSEnv γ]
 
-
+putExpr :: Expr a -> Maybe F.Sort -> [(F.Sort, [Expr a])] -> [(F.Sort, [Expr a])]
 putExpr _ Nothing  as
   = as
 putExpr e (Just t) []
@@ -210,7 +211,6 @@ applyArguments []           = []
 applyArguments ([]:_)       = []
 applyArguments ((x:xs):ess) = [x] : ((map (x:) (filter (not . null ) $ applyArguments ess)) ++ applyArguments (xs:ess))
 
-makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
 
 arity :: Ctor a -> Int
 arity c
@@ -234,10 +234,14 @@ instantiate γ oldses ses a
     hasNew = any (`elem` (concatMap snd ses))
     ss     = var_sort <$> axiom_vars a
 
+-- makeArgumnetsExpr n es = concatMap (`makeArgs` es) [1..n]
+makeArgs' :: Int -> [Expr a] -> [[Expr a]]
 makeArgs' n es
   | length es < n = []
   | otherwise     = makeArgs n es
 -- NV TODO: allow multiple occurences of the same argument
+
+duplicateArgs :: a -> b -> [b]
 duplicateArgs _ e = [e]
 
 makeArgs :: Int -> [Expr a] -> [[Expr a]]

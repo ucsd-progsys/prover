@@ -1,6 +1,6 @@
 module Prover.Parser where
 
-import Prover.Types 
+import Prover.Types
 import Prover.Constants (default_depth)
 
 import Text.Parsec
@@ -9,9 +9,9 @@ import Language.Fixpoint.Parse hiding (bindP)
 import Language.Fixpoint.Types        (Expr(PAnd), symbol, Sort(FObj))
 
 parseQuery :: String -> IO LQuery
-parseQuery fn = parseFromFile (queryP fn) fn 
+parseQuery fn = parseFromFile (queryP fn) fn
 
-
+queryP :: FilePath -> Parser LQuery
 queryP fn = do
   n      <- depthP
   bs     <- sepBy envP   whiteSpace
@@ -22,14 +22,14 @@ queryP fn = do
   axioms <- sepBy axiomP whiteSpace
   semi
   ctors  <- sepBy ctorP  whiteSpace
-  semi 
+  semi
   goal   <- goalP
   return $ mempty { q_axioms = axioms
                   , q_vars   = vars
                   , q_ctors  = ctors
                   , q_goal   = goal
                   , q_fname  = fn
-                  , q_depth  = n 
+                  , q_depth  = n
                   , q_env    = bs
                   , q_decls  = ds
                   }
@@ -42,7 +42,7 @@ declsP = try (do {n <- sepBy declP whiteSpace; semi; return n} )
 declP :: Parser Predicate
 declP = reserved "declare" >> predicateP
 
-depthP :: Parser Int 
+depthP :: Parser Int
 depthP = try (do {reserved "depth"; reserved "="; n <- fromInteger <$> integer; semi; return n} )
       <|> return default_depth
 
@@ -52,15 +52,16 @@ goalP = reserved "goal" >> colon >> predicateP
 ctorP :: Parser LVarCtor
 ctorP = do reserved "constructor"
            v <- varP
-           (vs, p) <- try (ctorAxiomP)
+           (vs, p) <- try ctorAxiomP
            return $ VarCtor v vs p
 
-ctorAxiomP 
+ctorAxiomP :: Parser ([LVar], Predicate)
+ctorAxiomP
    =  do reserved "with"
          reserved "forall"
          aargs <- argumentsP
          abody <- predicateP
-         return (aargs, abody) 
+         return (aargs, abody)
   <|> return ([], Pred $ PAnd [])
 
 bindP :: Parser LVar
@@ -73,7 +74,7 @@ predicateP :: Parser Predicate
 predicateP = Pred <$> predP
 
 axiomP :: Parser LAxiom
-axiomP = do 
+axiomP = do
   reserved "axiom"
   aname <- mkVar <$> symbolP
   colon
@@ -86,15 +87,12 @@ axiomP = do
    mkVar x   = Var x dummySort ()
 
 
-argumentsP :: Parser ([LVar])
+argumentsP :: Parser [LVar]
 argumentsP = brackets $ sepBy varP comma
 
 varP :: Parser LVar
-varP = do 
+varP = do
   x <- symbolP
   colon
   s <- sortP
   return $ Var x s ()
-
-
-

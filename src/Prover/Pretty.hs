@@ -45,6 +45,8 @@ instance Show (Query a) where
               "\nGoal  ::" ++ (show $ q_goal q) ++
               "\nDecls ::" ++ (show $ q_decls q) ++
               "\nFname ::" ++ (show $ q_fname q)
+            where
+              showNum ls = concat [ show i ++ " . " ++ show l | (l, i) <- zip ls [1..] ]
 
 instance Show (Proof a) where
   show Invalid    = "\nInvalid\n"
@@ -55,10 +57,11 @@ instance Show (ArgExpr a) where
   show ae = "\nArgExpr for " ++ show (arg_sort ae) ++ "\n\nEXPRS = \n\n" ++  (sep ", " (map show $ arg_exprs ae)) ++
             "\n\nConstructors = " ++ (sep ", " (map show $ arg_ctors ae)) ++ "\n\n"
 
-showNum ls = concat [ show i ++ " . " ++ show l | (l, i) <- zip ls [1..] ]
 
-
+par :: String -> String
 par str = " (" ++ str ++ ") "
+
+sep :: String -> [String] -> String
 sep _ []     = []
 sep _ [x]    = x
 sep c (x:xs) = x ++ c ++ sep c xs

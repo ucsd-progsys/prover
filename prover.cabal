@@ -33,4 +33,3 @@ executable prover
 
   main-is: src/Prover.hs
   ghc-options: -Werror -W
-

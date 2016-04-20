@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE PatternGuards        #-}
 
 module Prover.Types where
 
@@ -31,7 +30,7 @@ instance Eq (Var a) where
 -- Note: Ctors may be higher order, like compose
 -- when not fully instantiated, the predicate should not be used
 data Ctor a  = Ctor { ctor_expr :: Expr a
-                    , ctor_sort :: Sort 
+                    , ctor_sort :: Sort
                     , ctor_vars :: [LVar]
                     , ctor_prop :: Predicate
                     }
@@ -71,7 +70,7 @@ data Query a = Query { q_axioms :: ![Axiom a]
                      , q_fname  :: !FilePath
                      , q_depth  :: !Int
                      , q_decls  :: [Predicate]
-                     , q_isHO   :: Bool 
+                     , q_isHO   :: Bool
                      }
 
 -- | ArgExpr provides for each sort s
@@ -95,7 +94,7 @@ instance Monoid (Query a) where
                           , q_fname  = mempty
                           , q_depth  = default_depth
                           , q_decls  = mempty
-                          , q_isHO   = False 
+                          , q_isHO   = False
                           }
     mappend q1 q2 = Query { q_axioms = q_axioms q1 `mappend` q_axioms q2
                           , q_ctors  = q_ctors  q1 `mappend` q_ctors  q2
@@ -119,11 +118,12 @@ varCtorToCtor :: VarCtor a -> Ctor a
 varCtorToCtor (VarCtor v vs p) = Ctor (EVar v) (var_sort v) vs p
 
 
+isEVar :: Expr a -> Bool
 isEVar (EVar _) = True
 isEVar _        = False
 
 mkExpr :: Expr a -> F.Expr
-mkExpr (EVar v)    
+mkExpr (EVar v)
   = F.EVar (var_name v)
 mkExpr (EApp c es)
   = F.eApps (mkExpr $ ctor_expr c) (mkExpr <$> es)
