@@ -3,6 +3,7 @@ module Prover.Misc where
 import Data.List
 import Data.Function (on)
 
+
 powerset :: [a] -> [[a]]
 powerset = sortBy (compare `on` length) . powerset'
 
