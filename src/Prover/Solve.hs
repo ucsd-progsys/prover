@@ -301,4 +301,4 @@ unifiable (F.FFunc t s) (F.FFunc t' s') = unifiable t t' && unifiable s s'
 unifiable (F.FAbs _ t) t'               = unifiable t t'
 unifiable t            (F.FAbs _ t')    = unifiable t t'
 
-unifiable t1 t2 = isJust $ unify (const $ error "NV TODO: prover.Solve") t1 t2
+unifiable t1 t2 = isJust $ unifySorts t1 t2
